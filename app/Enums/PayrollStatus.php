@@ -61,4 +61,10 @@ enum PayrollStatus: string
             self::CANCELLED,
         ], true);
     }
+
+    /** Trạng thái có thể hủy (chưa PAID). */
+    public function isCancellable(): bool
+    {
+        return $this !== self::PAID;
+    }
 }

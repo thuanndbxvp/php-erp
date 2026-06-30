@@ -51,4 +51,10 @@ enum LeaveStatus: string
             self::CANCELLED,
         ], true);
     }
+
+    /** Trạng thái có thể chỉnh sửa (chưa terminal). */
+    public function isEditable(): bool
+    {
+        return ! $this->isTerminal();
+    }
 }

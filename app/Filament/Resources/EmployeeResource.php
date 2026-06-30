@@ -211,6 +211,9 @@ class EmployeeResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $user = auth()->user();
+        $canViewSalary = $user?->can('xem_luong_nhan_vien') ?? false;
+
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('employee_code')
@@ -260,7 +263,7 @@ class EmployeeResource extends Resource
                     ->label('Lương CB')
                     ->money('VND')
                     ->sortable()
-                    ->toggleable(),
+                    ->toggleable(isToggledHiddenByDefault: ! $canViewSalary),
 
                 Tables\Columns\TextColumn::make('start_date')
                     ->label('Vào làm')
@@ -321,5 +324,32 @@ class EmployeeResource extends Resource
             'create' => Pages\CreateEmployee::route('/create'),
             'edit' => Pages\EditEmployee::route('/{record}/edit'),
         ];
+    }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        return auth()->user()?->canAny(['xem_danh_sach_nhan_vien', 'xem_danh_sach_phong_ban']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('tao_nhan_vien') ?? false;
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('cap_nhat_nhan_vien') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        $user = auth()->user();
+        if (! $user?->can('xoa_nhan_vien')) {
+            return false;
+        }
+
+        return $record->status?->value !== 'ACTIVE';
     }
 }

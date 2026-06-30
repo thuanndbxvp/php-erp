@@ -21,7 +21,7 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(): void
     {
-        // Wire SO observer - khi SO chuyển sang SHIPPED/COMPLETED → auto-tạo Commission
+        // Wire SO observer — khi SO chuyển sang SHIPPED/COMPLETED → auto-tạo Commission
         SalesOrder::observe(SalesOrderObserver::class);
     }
 }

@@ -186,10 +186,10 @@ class PayrollRunResource extends Resource
                     ->label('Tính lương')
                     ->icon('heroicon-o-calculator')
                     ->color('info')
-                    ->visible(fn (PayrollRun $record) => in_array($record->status, [
-                        PayrollStatus::DRAFT,
-                        PayrollStatus::PROCESSING,
-                    ], true))
+                    ->visible(fn (PayrollRun $record) =>
+                        auth()->user()?->can('tinh_luong') ?? false
+                        && in_array($record->status->value, ['DRAFT', 'PROCESSING'], true)
+                    )
                     ->requiresConfirmation()
                     ->modalHeading('Tính lương cho kỳ này?')
                     ->modalDescription('Hệ thống sẽ tạo/cập nhật payslip cho từng nhân viên đang active. Payslip cũ (nếu có) sẽ bị xoá và tính lại.')
@@ -208,7 +208,10 @@ class PayrollRunResource extends Resource
                     ->label('Duyệt')
                     ->icon('heroicon-o-check-badge')
                     ->color('warning')
-                    ->visible(fn (PayrollRun $record) => $record->status === PayrollStatus::DRAFT)
+                    ->visible(fn (PayrollRun $record) =>
+                        (auth()->user()?->can('duyet_tinh_luong') ?? false)
+                        && $record->status->value === 'DRAFT'
+                    )
                     ->requiresConfirmation()
                     ->action(function (PayrollRun $record) {
                         $service = app(\App\Services\HR\PayrollService::class);
@@ -224,7 +227,10 @@ class PayrollRunResource extends Resource
                     ->label('Chi trả')
                     ->icon('heroicon-o-banknotes')
                     ->color('success')
-                    ->visible(fn (PayrollRun $record) => $record->status === PayrollStatus::APPROVED)
+                    ->visible(fn (PayrollRun $record) =>
+                        (auth()->user()?->can('chi_tra_luong') ?? false)
+                        && $record->status->value === 'APPROVED'
+                    )
                     ->requiresConfirmation()
                     ->form([
                         Forms\Components\DatePicker::make('payment_date')
@@ -248,7 +254,10 @@ class PayrollRunResource extends Resource
                     ->label('Huỷ kỳ')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->visible(fn (PayrollRun $record) => ! $record->status->isTerminal())
+                    ->visible(fn (PayrollRun $record) =>
+                        (auth()->user()?->can('huy_dot_tinh_luong') ?? false)
+                        && ! $record->status->isTerminal()
+                    )
                     ->requiresConfirmation()
                     ->form([
                         Forms\Components\Textarea::make('reason')
@@ -286,5 +295,29 @@ class PayrollRunResource extends Resource
             'create' => Pages\CreatePayrollRun::route('/create'),
             'edit' => Pages\EditPayrollRun::route('/{record}/edit'),
         ];
+    }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        $u = auth()->user();
+
+        return $u?->canAny(['xem_danh_sach_tinh_luong', 'xem_chi_tiet_phieu_luong']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('tao_dot_tinh_luong') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        $u = auth()->user();
+        if (! $u?->can('huy_dot_tinh_luong')) {
+            return false;
+        }
+
+        return $record->status->value === 'DRAFT';
     }
 }

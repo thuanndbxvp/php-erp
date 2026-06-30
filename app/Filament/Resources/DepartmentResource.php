@@ -171,4 +171,26 @@ class DepartmentResource extends Resource
             'edit' => Pages\EditDepartment::route('/{record}/edit'),
         ];
     }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        return auth()->user()?->canAny(['xem_danh_sach_phong_ban', 'xem_danh_sach_nhan_vien']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('tao_phong_ban') ?? false;
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('cap_nhat_phong_ban') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('xoa_phong_ban') ?? false;
+    }
 }

@@ -8,6 +8,7 @@ use App\Enums\CommissionStatus;
 use App\Enums\NavigationGroup;
 use App\Filament\Resources\CommissionResource\Pages;
 use App\Models\Commission;
+use App\Services\HR\CommissionService;
 use Filament\Forms;
 use Filament\Resources\Resource;
 use Filament\Schemas\Schema;
@@ -32,10 +33,6 @@ class CommissionResource extends Resource
 
     protected static ?int $navigationSort = 77;
 
-    /**
-     * CommissionResource chủ yếu READ-ONLY (được auto-gen từ SalesOrder Observer).
-     * Không có form Create/Edit — chỉ cho phép action: Approve, Reverse, Cancel.
-     */
     public static function form(Schema $schema): Schema
     {
         return $schema->components([
@@ -72,6 +69,10 @@ class CommissionResource extends Resource
 
     public static function table(Table $table): Table
     {
+        $u = auth()->user();
+        $canApprove = $u?->can('duyet_hoa_hong') ?? false;
+        $canReverse = $u?->can('hoan_tien_hoa_hong') ?? false;
+
         return $table
             ->columns([
                 Tables\Columns\TextColumn::make('employee.full_name')
@@ -167,22 +168,26 @@ class CommissionResource extends Resource
                     ->label('Duyệt')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Commission $record) => $record->status === CommissionStatus::PENDING)
+                    ->visible(fn (Commission $record) => $canApprove && $record->status === CommissionStatus::PENDING)
                     ->requiresConfirmation()
-                    ->action(fn (Commission $record) => app(\App\Services\HR\CommissionService::class)->approve($record)),
+                    ->action(function (Commission $record) {
+                        app(CommissionService::class)->approve($record);
+                    }),
 
                 Tables\Actions\Action::make('reverse')
                     ->label('Đảo ngược')
                     ->icon('heroicon-o-arrow-uturn-left')
                     ->color('danger')
-                    ->visible(fn (Commission $record) => ! $record->status->isTerminal())
+                    ->visible(fn (Commission $record) => $canReverse && ! $record->status->isTerminal())
                     ->requiresConfirmation()
                     ->form([
                         Forms\Components\Textarea::make('notes')
                             ->label('Lý do (không bắt buộc)')
                             ->rows(2),
                     ])
-                    ->action(fn (Commission $record, array $data) => app(\App\Services\HR\CommissionService::class)->reverse($record, $data['notes'] ?? null)),
+                    ->action(function (Commission $record, array $data) {
+                        app(CommissionService::class)->reverse($record, $data['notes'] ?? null);
+                    }),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -196,12 +201,20 @@ class CommissionResource extends Resource
     {
         return [
             'index' => Pages\ListCommissions::route('/'),
-            // Không Create/Edit: commission được auto-gen từ SO Observer
         ];
+    }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        $u = auth()->user();
+
+        return $u?->canAny(['xem_danh_sach_hoa_hong', 'xem_hoa_hong_ca_nhan']) ?? false;
     }
 
     public static function canCreate(): bool
     {
-        return false;
+        return false; // chỉ auto-gen từ SO Observer
     }
 }

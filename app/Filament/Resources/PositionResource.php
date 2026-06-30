@@ -178,4 +178,26 @@ class PositionResource extends Resource
             'edit' => Pages\EditPosition::route('/{record}/edit'),
         ];
     }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        return auth()->user()?->canAny(['xem_danh_sach_chuc_vu', 'xem_danh_sach_nhan_vien']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('tao_chuc_vu') ?? false;
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('cap_nhat_chuc_vu') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('xoa_chuc_vu') ?? false;
+    }
 }

@@ -181,4 +181,26 @@ class CommissionRuleResource extends Resource
             'edit' => Pages\EditCommissionRule::route('/{record}/edit'),
         ];
     }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        return auth()->user()?->canAny(['xem_danh_sach_luat_hoa_hong', 'xem_danh_sach_hoa_hong']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('tao_luat_hoa_hong') ?? false;
+    }
+
+    public static function canEdit(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('cap_nhat_luat_hoa_hong') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('xoa_luat_hoa_hong') ?? false;
+    }
 }

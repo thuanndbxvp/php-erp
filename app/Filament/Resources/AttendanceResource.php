@@ -188,4 +188,25 @@ class AttendanceResource extends Resource
             'edit' => Pages\EditAttendance::route('/{record}/edit'),
         ];
     }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        $u = auth()->user();
+
+        return $u?->canAny(['xem_danh_sach_cham_cong', 'xem_cham_cong_ca_nhan']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        $u = auth()->user();
+
+        return $u?->canAny(['tao_cham_cong', 'tao_cham_cong_ca_nhan']) ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        return auth()->user()?->can('xoa_cham_cong') ?? false;
+    }
 }

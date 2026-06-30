@@ -181,7 +181,10 @@ class LeaveResource extends Resource
                     ->label('Duyệt')
                     ->icon('heroicon-o-check-circle')
                     ->color('success')
-                    ->visible(fn (Leave $record) => $record->status === LeaveStatus::PENDING)
+                    ->visible(fn (Leave $record) =>
+                        (auth()->user()?->can('duyet_don_nghi_phep') ?? false)
+                        && $record->status === \App\Enums\LeaveStatus::PENDING
+                    )
                     ->requiresConfirmation()
                     ->form([
                         Forms\Components\Textarea::make('approver_notes')
@@ -197,7 +200,10 @@ class LeaveResource extends Resource
                     ->label('Từ chối')
                     ->icon('heroicon-o-x-circle')
                     ->color('danger')
-                    ->visible(fn (Leave $record) => $record->status === LeaveStatus::PENDING)
+                    ->visible(fn (Leave $record) =>
+                        (auth()->user()?->can('tu_choi_don_nghi_phep') ?? false)
+                        && $record->status === \App\Enums\LeaveStatus::PENDING
+                    )
                     ->requiresConfirmation()
                     ->form([
                         Forms\Components\Textarea::make('approver_notes')
@@ -214,13 +220,19 @@ class LeaveResource extends Resource
                     ->label('Huỷ đơn')
                     ->icon('heroicon-o-trash')
                     ->color('warning')
-                    ->visible(fn (Leave $record) => in_array($record->status, [LeaveStatus::PENDING, LeaveStatus::APPROVED], true))
+                    ->visible(fn (Leave $record) =>
+                        (auth()->user()?->can('huy_don_nghi_phep') ?? false)
+                        && in_array($record->status->value, ['PENDING', 'APPROVED'], true)
+                    )
                     ->requiresConfirmation()
                     ->action(fn (Leave $record) => app(\App\Services\HR\LeaveService::class)->cancel($record)),
 
                 Tables\Actions\EditAction::make()
                     ->label('Sửa')
-                    ->visible(fn (Leave $record) => $record->status === LeaveStatus::PENDING || $record->status === LeaveStatus::DRAFT),
+                    ->visible(fn (Leave $record) =>
+                        (auth()->user()?->can('cap_nhat_don_nghi_phep') ?? false)
+                        && in_array($record->status->value, ['PENDING', 'DRAFT'], true)
+                    ),
             ])
             ->bulkActions([
                 Tables\Actions\BulkActionGroup::make([
@@ -228,6 +240,33 @@ class LeaveResource extends Resource
                 ]),
             ])
             ->defaultSort('created_at', 'desc');
+    }
+
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        $u = auth()->user();
+
+        return $u?->canAny(['xem_danh_sach_nghi_phep', 'xem_don_nghi_phep_ca_nhan']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('tao_don_nghi_phep') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        $u = auth()->user();
+        if ($u?->can('xoa_don_nghi_phep')) {
+            return true;
+        }
+
+        // NV xóa đơn PENDING của mình
+        return $u?->employee
+            && $u->employee->id === $record->employee_id
+            && $record->status->value === 'PENDING';
     }
 
     public static function getPages(): array

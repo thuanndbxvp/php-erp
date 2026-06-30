@@ -175,16 +175,34 @@ class PayslipResource extends Resource
             ->defaultSort('created_at', 'desc');
     }
 
+    // ─── RBAC Gates ────────────────────────────────────────────────────────────
+
+    public static function canAccessNavigation(): bool
+    {
+        $u = auth()->user();
+
+        return $u?->canAny(['xem_danh_sach_tinh_luong', 'xem_chi_tiet_phieu_luong']) ?? false;
+    }
+
+    public static function canCreate(): bool
+    {
+        return auth()->user()?->can('tao_dot_tinh_luong') ?? false;
+    }
+
+    public static function canDelete(\Illuminate\Database\Eloquent\Model $record): bool
+    {
+        $u = auth()->user();
+        if (! $u?->can('huy_dot_tinh_luong')) {
+            return false;
+        }
+
+        return $record->status->value === 'DRAFT';
+    }
+
     public static function getPages(): array
     {
         return [
             'index' => Pages\ListPayslips::route('/'),
         ];
-    }
-
-    // Không cho tạo / sửa / xoá từ resource này (vào PayrollRun mới có actions)
-    public static function canCreate(): bool
-    {
-        return false;
     }
 }
