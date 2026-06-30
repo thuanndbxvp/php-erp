@@ -39,5 +39,10 @@ class DatabaseSeeder extends Seeder
 
         // Bước 4: Năm tài chính + 12 kỳ mặc định
         $this->call(FiscalYearSeeder::class);
+
+        // Bước 5: HR & Payroll — Departments / Positions / Employees / Attendance /
+        // Leaves / CommissionRules / Commissions / PayrollRuns / Payslips.
+        // Đặt sau cùng vì HR có thể tham chiếu User (created_by/approved_by).
+        $this->call(HrSeeder::class);
     }
 }
